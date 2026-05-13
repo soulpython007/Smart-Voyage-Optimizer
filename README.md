@@ -9,6 +9,10 @@ A premium, interactive dashboard for visualizing and optimizing global shipping 
 ![Stack](https://img.shields.io/badge/Stack-React_TypeScript_Vite-3b82f6?style=flat-square)
 ![Map](https://img.shields.io/badge/Map-Leaflet-60a5fa?style=flat-square)
 
+Live Demo
+Frontend: https://smart-voyage-optimizer.vercel.app
+Backend API: https://smart-voyage-optimizer-production.up.railway.app
+
 ---
 
 ## Features
@@ -213,6 +217,3 @@ docker run -p 4000:4000 smart-voyage-backend
 
 ---
 
-## License
-
-This project is licensed under the MIT License.
