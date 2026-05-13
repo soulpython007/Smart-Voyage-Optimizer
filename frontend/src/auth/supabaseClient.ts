@@ -14,5 +14,9 @@ export const supabase = createClient(
 );
 
 export function getAccessToken(): string | null {
-  return localStorage.getItem('sb-access-token');
+  try {
+    return localStorage.getItem('sb-access-token');
+  } catch {
+    return null;
+  }
 }
