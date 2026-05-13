@@ -1,0 +1,22 @@
+[
+  { "id": "sg-sin", "name": "Port of Singapore", "country": "Singapore", "latitude": 1.2789, "longitude": 103.8389 },
+  { "id": "lk-col", "name": "Port of Colombo", "country": "Sri Lanka", "latitude": 6.9418, "longitude": 79.8426 },
+  { "id": "in-mum", "name": "Jawaharlal Nehru Port (Nhava Sheva)", "country": "India", "latitude": 18.9500, "longitude": 72.9500 },
+  { "id": "in-chennai", "name": "Chennai Port", "country": "India", "latitude": 13.0827, "longitude": 80.2707 },
+  { "id": "in-kochi", "name": "Cochin Port", "country": "India", "latitude": 9.9300, "longitude": 76.2700 },
+  { "id": "pk-khi", "name": "Port of Karachi", "country": "Pakistan", "latitude": 24.8100, "longitude": 66.9600 },
+  { "id": "bd-ctg", "name": "Port of Chittagong", "country": "Bangladesh", "latitude": 22.2500, "longitude": 91.7800 },
+  { "id": "my-pkl", "name": "Port Klang", "country": "Malaysia", "latitude": 3.0030, "longitude": 101.3917 },
+  { "id": "id-tjpriok", "name": "Tanjung Priok (Jakarta)", "country": "Indonesia", "latitude": -6.1000, "longitude": 106.8833 },
+  { "id": "dj-jib", "name": "Port of Djibouti", "country": "Djibouti", "latitude": 11.5880, "longitude": 43.1499 },
+  { "id": "ye-aden", "name": "Port of Aden", "country": "Yemen", "latitude": 12.7855, "longitude": 44.9721 },
+  { "id": "om-sll", "name": "Port of Salalah", "country": "Oman", "latitude": 16.9440, "longitude": 54.0113 },
+  { "id": "om-duqm", "name": "Port of Duqm", "country": "Oman", "latitude": 19.6544, "longitude": 57.6798 },
+  { "id": "eg-suez", "name": "Port of Suez", "country": "Egypt", "latitude": 29.9668, "longitude": 32.5496 },
+  { "id": "sa-jed", "name": "Port of Jeddah", "country": "Saudi Arabia", "latitude": 21.4858, "longitude": 39.1865 },
+  { "id": "ke-mba", "name": "Port of Mombasa", "country": "Kenya", "latitude": -4.0435, "longitude": 39.6682 },
+  { "id": "tz-dar", "name": "Port of Dar es Salaam", "country": "Tanzania", "latitude": -6.8235, "longitude": 39.2698 },
+  { "id": "mu-pl", "name": "Port Louis", "country": "Mauritius", "latitude": -20.1609, "longitude": 57.4962 },
+  { "id": "lk-hba", "name": "Port of Hambantota", "country": "Sri Lanka", "latitude": 6.1236, "longitude": 81.1195 },
+  { "id": "th-lch", "name": "Laem Chabang Port", "country": "Thailand", "latitude": 13.0800, "longitude": 100.8800 }
+]

@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # MapTiler key is domain-restricted; embedded at build time for map tiles
+        MAPTILER_API_KEY: ${MAPTILER_API_KEY}
+    ports:
+      - '3000:80'
+    # ─── DEV ──────────────────────────────────────────────
+    # Uncomment below for hot-reload during development:
+    #   volumes:
+    #     - ./frontend:/app
+    #     - /app/node_modules
+    # ─── SECURITY ─────────────────────────────────────────
+    # .env files are excluded via .dockerignore.
+    # No runtime secrets are passed to the frontend container.
+    # OpenWeather API keys must NEVER reach the browser.
+    # The MapTiler key is only used at build time and is
+    # domain-restricted, so it is safe to embed in the bundle.
+
+  backend:
+    build: ./backend
+    ports:
+      - '4000:4000'
+    environment:
+      # Injected at runtime — never baked into the image
+      OPENWEATHER_API_KEY: ${OPENWEATHER_API_KEY}
+      MAPTILER_API_KEY: ${MAPTILER_API_KEY}
+    # ─── DEV ──────────────────────────────────────────────
+    # Uncomment below for hot-reload during development:
+    #   volumes:
+    #     - ./backend:/app
+    #     - /app/node_modules
+    # ─── SECURITY ─────────────────────────────────────────
+    # The backend proxies OpenWeather API requests on behalf
+    # of the frontend, so the secret key stays server-side.

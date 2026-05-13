@@ -1,0 +1,102 @@
+[
+  {
+    "id": "shp-001",
+    "name": "MV Maersk Chennai",
+    "type": "Container Ship",
+    "draft": 14.5,
+    "maxSpeedKnots": 22,
+    "fuelConsumptionRate": 185,
+    "currentPosition": { "latitude": 1.2789, "longitude": 103.8389 },
+    "destination": "in-mum"
+  },
+  {
+    "id": "shp-002",
+    "name": "MV Ever Given",
+    "type": "Container Ship",
+    "draft": 15.7,
+    "maxSpeedKnots": 20,
+    "fuelConsumptionRate": 210,
+    "currentPosition": { "latitude": 12.5000, "longitude": 44.5000 },
+    "destination": "eg-suez"
+  },
+  {
+    "id": "shp-003",
+    "name": "MT Marlin Luanda",
+    "type": "Crude Oil Tanker",
+    "draft": 20.5,
+    "maxSpeedKnots": 14,
+    "fuelConsumptionRate": 140,
+    "currentPosition": { "latitude": 18.5000, "longitude": 57.0000 },
+    "destination": "in-mum"
+  },
+  {
+    "id": "shp-004",
+    "name": "MV APL Southampton",
+    "type": "Container Ship",
+    "draft": 13.8,
+    "maxSpeedKnots": 24,
+    "fuelConsumptionRate": 195,
+    "currentPosition": { "latitude": 6.5000, "longitude": 80.0000 },
+    "destination": "sg-sin"
+  },
+  {
+    "id": "shp-005",
+    "name": "MT BW Tulip",
+    "type": "LNG Tanker",
+    "draft": 11.2,
+    "maxSpeedKnots": 18,
+    "fuelConsumptionRate": 160,
+    "currentPosition": { "latitude": -4.0000, "longitude": 40.0000 },
+    "destination": "dj-jib"
+  },
+  {
+    "id": "shp-006",
+    "name": "MV COSCO Shipping Virgo",
+    "type": "Container Ship",
+    "draft": 15.0,
+    "maxSpeedKnots": 21,
+    "fuelConsumptionRate": 200,
+    "currentPosition": { "latitude": 9.5000, "longitude": 76.5000 },
+    "destination": "my-pkl"
+  },
+  {
+    "id": "shp-007",
+    "name": "MV Hyundai Together",
+    "type": "Container Ship",
+    "draft": 14.2,
+    "maxSpeedKnots": 23,
+    "fuelConsumptionRate": 190,
+    "currentPosition": { "latitude": 3.0000, "longitude": 101.0000 },
+    "destination": "ye-aden"
+  },
+  {
+    "id": "shp-008",
+    "name": "MT Suezmax Pride",
+    "type": "Crude Oil Tanker",
+    "draft": 18.8,
+    "maxSpeedKnots": 13,
+    "fuelConsumptionRate": 130,
+    "currentPosition": { "latitude": 29.5000, "longitude": 33.0000 },
+    "destination": "om-sll"
+  },
+  {
+    "id": "shp-009",
+    "name": "MV MSC Diana",
+    "type": "Container Ship",
+    "draft": 14.9,
+    "maxSpeedKnots": 22,
+    "fuelConsumptionRate": 180,
+    "currentPosition": { "latitude": 21.0000, "longitude": 39.5000 },
+    "destination": "lk-col"
+  },
+  {
+    "id": "shp-010",
+    "name": "MV Safeen Prime",
+    "type": "Bulk Carrier",
+    "draft": 16.5,
+    "maxSpeedKnots": 15,
+    "fuelConsumptionRate": 120,
+    "currentPosition": { "latitude": -6.5000, "longitude": 39.5000 },
+    "destination": "in-kochi"
+  }
+]
