@@ -9,6 +9,7 @@ import { RouteConfigPanel } from '../components/dashboard/RouteConfigPanel';
 import { VoyageStatsCards } from '../components/dashboard/VoyageStatsCards';
 import { Card } from '../components/ui';
 import { BackendUnreachable, MapLoadingOverlay } from '../components/ui/Skeleton';
+import { NotificationSystem } from '../components/ui/NotificationSystem';
 
 export function Dashboard() {
   const loading = useStore((s) => s.loading);
@@ -60,17 +61,17 @@ export function Dashboard() {
 
   if (loading && !initialized) {
     return (
-      <div className="min-h-screen bg-off-white dark:bg-gray-900 flex items-center justify-center">
-        <Card className="text-center p-8 max-w-sm">
-          <div className="w-12 h-12 mx-auto mb-4 bg-blue-600 border-2 border-black dark:border-gray-600 rounded-xl flex items-center justify-center shadow-neobrutalist">
+      <div className="min-h-screen bg-off-white dark:bg-gray-950 flex items-center justify-center">
+        <Card className="text-center p-8 max-w-sm bg-gray-900/80 backdrop-blur-xl border-blue-900/30 shadow-[0_8px_32px_rgba(0,0,0,0.3)]">
+          <div className="w-14 h-14 mx-auto mb-4 bg-gradient-to-br from-blue-600 to-blue-800 border-2 border-blue-400/30 rounded-xl flex items-center justify-center shadow-[0_4px_0_0_rgba(30,58,95,0.5)]">
             <svg viewBox="0 0 24 24" width="24" height="24" fill="white">
               <path d="M12 2 L4 20 L12 16 L20 20 Z" />
             </svg>
           </div>
-          <h2 className="text-xl font-extrabold mb-2 dark:text-white">Smart Voyage Optimizer</h2>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Loading maritime data...</p>
-          <div className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full border border-black dark:border-gray-600 overflow-hidden">
-            <div className="h-full bg-blue-600 rounded-full animate-pulse" style={{ width: '60%' }} />
+          <h2 className="text-lg font-extrabold mb-2 text-white">Smart Voyage Optimizer</h2>
+          <p className="text-xs text-blue-300/60 mb-4">Loading maritime intelligence data...</p>
+          <div className="w-full h-1.5 bg-gray-700 rounded-full overflow-hidden">
+            <div className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full animate-pulse" style={{ width: '60%' }} />
           </div>
         </Card>
       </div>
@@ -78,12 +79,15 @@ export function Dashboard() {
   }
 
   return (
-    <DashboardLayout
-      sidebar={<RouteConfigPanel />}
-      map={<MaritimeMap />}
-      stats={<VoyageStatsCards />}
-      connectionState={connectionState}
-      onRetryConnection={handleRetry}
-    />
+    <>
+      <NotificationSystem />
+      <DashboardLayout
+        sidebar={<RouteConfigPanel />}
+        map={<MaritimeMap />}
+        stats={<VoyageStatsCards />}
+        connectionState={connectionState}
+        onRetryConnection={handleRetry}
+      />
+    </>
   );
 }

@@ -1,6 +1,8 @@
 import { useEffect, useState, useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { useStore } from '../../store/useStore';
 import { Dropdown, Button, Slider, SidebarSection, RouteCard, LayerToggle } from '../ui';
+import { RouteDetailPanel } from '../ui/RouteDetailPanel';
 import { MODE_PROFILES, type OptimizationMode } from '../../types/maritime';
 
 export function RouteConfigPanel() {
@@ -58,7 +60,11 @@ export function RouteConfigPanel() {
   ];
 
   return (
-    <div className="space-y-1">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="space-y-1"
+    >
       <SidebarSection title="Route Configuration">
         <Dropdown
           label="Departure Port"
@@ -80,14 +86,16 @@ export function RouteConfigPanel() {
           options={modeOptions}
           onChange={handleModeChange}
         />
-        <Button
-          className="w-full mt-2"
-          size="lg"
-          onClick={optimize}
-          loading={isOptimizing}
-        >
-          Optimize Route
-        </Button>
+        <motion.div whileHover={{ scale: 1.01 }} whileTap={{ scale: 0.99 }}>
+          <Button
+            className="w-full mt-2"
+            size="lg"
+            onClick={optimize}
+            loading={isOptimizing}
+          >
+            Optimize Route
+          </Button>
+        </motion.div>
       </SidebarSection>
 
       {settings.mode === 'custom' && (
@@ -113,7 +121,23 @@ export function RouteConfigPanel() {
         </SidebarSection>
       )}
 
-      <SidebarSection title="Map Layers">
+      {routes.length > 0 && (
+        <SidebarSection title="Routes">
+          <div className="space-y-2">
+            {routes.map((route, i) => (
+              <RouteCard
+                key={route.mode}
+                route={route}
+                isSelected={selectedRouteIndex === i}
+                onSelect={() => selectRoute(i)}
+              />
+            ))}
+          </div>
+          <RouteDetailPanel />
+        </SidebarSection>
+      )}
+
+      <SidebarSection title="Map Layers" defaultOpen={false}>
         <LayerToggle
           label="Weather Zones"
           enabled={showWeather}
@@ -127,21 +151,6 @@ export function RouteConfigPanel() {
           color="#3b82f6"
         />
       </SidebarSection>
-
-      {routes.length > 0 && (
-        <SidebarSection title="Routes">
-          <div className="space-y-2">
-            {routes.map((route, i) => (
-              <RouteCard
-                key={route.mode}
-                route={route}
-                isSelected={selectedRouteIndex === i}
-                onSelect={() => selectRoute(i)}
-              />
-            ))}
-          </div>
-        </SidebarSection>
-      )}
-    </div>
+    </motion.div>
   );
 }

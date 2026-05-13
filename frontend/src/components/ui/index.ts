@@ -13,3 +13,6 @@ export { Skeleton, StatCardSkeleton, RoutePanelSkeleton, SidebarSkeleton, MapLoa
 export { ConnectionStatus } from './ConnectionStatus';
 export type { ConnectionState } from './ConnectionStatus';
 export { DarkModeToggle } from './DarkModeToggle';
+export { NotificationSystem } from './NotificationSystem';
+export { MapControls } from './MapControls';
+export { RouteDetailPanel } from './RouteDetailPanel';

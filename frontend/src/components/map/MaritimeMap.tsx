@@ -1,4 +1,5 @@
-import { MapContainer, TileLayer, ZoomControl } from 'react-leaflet';
+import { useEffect, useRef, useCallback } from 'react';
+import { MapContainer, TileLayer, ZoomControl, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { ShipMarkers } from './ShipMarkers';
@@ -6,15 +7,16 @@ import { WeatherLayer } from './WeatherLayer';
 import { CurrentLayer } from './CurrentLayer';
 import { RouteLayer } from './RouteLayer';
 import { useTheme } from '../../providers/ThemeProvider';
+import { useStore } from '../../store/useStore';
 
-const INDIAN_OCEAN_CENTER: [number, number] = [0, 72];
-const INITIAL_ZOOM = 4;
-const MIN_ZOOM = 3;
-const MAX_ZOOM = 10;
+const GLOBAL_CENTER: [number, number] = [15, 60];
+const INITIAL_ZOOM = 3;
+const MIN_ZOOM = 2;
+const MAX_ZOOM = 12;
 
-const BOUNDS = L.latLngBounds(
-  L.latLng(-15, 20),
-  L.latLng(35, 115),
+const GLOBAL_BOUNDS = L.latLngBounds(
+  L.latLng(-60, -30),
+  L.latLng(70, 150),
 );
 
 const LIGHT_TILES = {
@@ -27,20 +29,59 @@ const DARK_TILES = {
   attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
 };
 
-function MapContent() {
-  return (
-    <>
-      <ShipMarkers />
-      <WeatherLayer />
-      <CurrentLayer />
-      <RouteLayer />
-    </>
-  );
-}
+function MapController() {
+  const map = useMap();
+  const followShip = useStore((s) => s.followShip);
+  const ships = useStore((s) => s.ships);
+  const prevFollowRef = useRef<string | null>(null);
 
-let mapInstance: L.Map | null = null;
-export function getMapInstance() {
-  return mapInstance;
+  useEffect(() => {
+    map.setMinZoom(MIN_ZOOM);
+    map.setMaxZoom(MAX_ZOOM);
+    map.setMaxBounds(GLOBAL_BOUNDS);
+    map.options.maxBoundsViscosity = 1.0;
+  }, [map]);
+
+  useEffect(() => {
+    if (followShip && followShip !== prevFollowRef.current) {
+      prevFollowRef.current = followShip;
+    }
+  }, [followShip]);
+
+  useEffect(() => {
+    if (!followShip) {
+      prevFollowRef.current = null;
+      return;
+    }
+
+    const feature = ships?.features?.find((f) => {
+      const props = f.properties as Record<string, unknown>;
+      return props?.id === followShip;
+    });
+
+    if (feature && feature.geometry.type === 'Point') {
+      const coords = feature.geometry.coordinates as number[];
+      map.flyTo([coords[1], coords[0]], 6, {
+        duration: 1.5,
+        easeLinearity: 0.3,
+      });
+    }
+  }, [followShip, ships, map]);
+
+  useEffect(() => {
+    if (followShip) {
+      const feature = ships?.features?.find((f) => {
+        const props = f.properties as Record<string, unknown>;
+        return props?.id === followShip;
+      });
+      if (feature && feature.geometry.type === 'Point') {
+        const coords = feature.geometry.coordinates as number[];
+        map.panTo([coords[1], coords[0]], { animate: true, duration: 1 });
+      }
+    }
+  });
+
+  return null;
 }
 
 export function MaritimeMap() {
@@ -48,13 +89,13 @@ export function MaritimeMap() {
   const tiles = theme === 'dark' ? DARK_TILES : LIGHT_TILES;
 
   return (
-    <div className="w-full h-full rounded-xl overflow-hidden border-2 border-black dark:border-gray-600 shadow-neobrutalist bg-white dark:bg-gray-800">
+    <div className="w-full h-full rounded-xl overflow-hidden border-2 border-black dark:border-blue-900/50 shadow-neobrutalist bg-[#0a1628] dark:bg-[#060d1a] relative">
       <MapContainer
-        center={INDIAN_OCEAN_CENTER}
+        center={GLOBAL_CENTER}
         zoom={INITIAL_ZOOM}
         minZoom={MIN_ZOOM}
         maxZoom={MAX_ZOOM}
-        maxBounds={BOUNDS}
+        maxBounds={GLOBAL_BOUNDS}
         maxBoundsViscosity={1.0}
         zoomControl={false}
         className="w-full h-full"
@@ -68,7 +109,11 @@ export function MaritimeMap() {
           url={tiles.url}
           key={theme}
         />
-        <MapContent />
+        <MapController />
+        <ShipMarkers />
+        <WeatherLayer />
+        <CurrentLayer />
+        <RouteLayer />
       </MapContainer>
     </div>
   );

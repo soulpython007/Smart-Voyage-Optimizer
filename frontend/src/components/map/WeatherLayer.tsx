@@ -22,7 +22,6 @@ export function WeatherLayer() {
   const weatherZones = useStore((s) => s.weatherZones);
   const showWeather = useStore((s) => s.showWeather);
   const layerRef = useRef<L.LayerGroup | null>(null);
-  const pulseRefs = useRef<Map<string, L.CircleMarker>>(new Map());
 
   const features = useMemo(() => {
     return weatherZones?.features?.filter((f) => f.geometry.type === 'Polygon') ?? [];
@@ -31,32 +30,12 @@ export function WeatherLayer() {
   useEffect(() => {
     if (!map) return;
 
-    if (!layerRef.current) {
-      layerRef.current = L.layerGroup().addTo(map);
-    }
-
+    if (!layerRef.current) layerRef.current = L.layerGroup().addTo(map);
     const layer = layerRef.current;
 
-    if (!showWeather) {
-      layer.clearLayers();
-      pulseRefs.current.clear();
-      return;
-    }
+    layer.clearLayers();
 
-    const currentIds = new Set(features.map((f) => ((f.properties) as Record<string, unknown>)?.id as string));
-
-    pulseRefs.current.forEach((_, id) => {
-      if (!currentIds.has(id)) {
-        pulseRefs.current.delete(id);
-      }
-    });
-
-    layer.eachLayer((l) => {
-      const key = (l as L.CircleMarker & { _zoneId?: string })._zoneId;
-      if (key && !currentIds.has(key)) {
-        layer.removeLayer(l);
-      }
-    });
+    if (!showWeather) return;
 
     features.forEach((feature) => {
       const props = feature.properties as unknown as WeatherProperties;
@@ -73,52 +52,86 @@ export function WeatherLayer() {
         return s + d;
       }, 0) / ring.length;
 
-      if (pulseRefs.current.has(props.id)) return;
-
       const color = getSeverityColor(props.severity);
 
-      const circle = L.circleMarker([centerLat, centerLng], {
-        radius: Math.max(20, radiusM / 5000),
-        color: color,
-        fillColor: color,
-        fillOpacity: 0.15,
-        weight: 2,
-        opacity: 0.5,
-      });
+      const polygon = L.polygon(
+        ring.map((c) => [c[1], c[0]] as [number, number]),
+        {
+          color: color,
+          fillColor: color,
+          fillOpacity: 0.12,
+          weight: 2,
+          opacity: 0.6,
+        },
+      );
 
-      (circle as L.CircleMarker & { _zoneId?: string })._zoneId = props.id;
-
-      circle.bindPopup(`
-        <div style="font-family: system-ui, sans-serif; min-width: 140px;">
-          <div style="font-weight: 800; font-size: 13px; margin-bottom: 4px;">${getSeverityLabel(props.severity)}</div>
-          <div style="font-size: 12px;">
-            <div>Wind: <strong>${props.windSpeed ?? 'N/A'} kn</strong></div>
-            <div>Swell: <strong>${props.waveHeight ?? 'N/A'} m</strong></div>
-            <div>Severity: <strong>${props.severity?.toFixed(1) ?? 'N/A'}</strong></div>
-            <div>Status: <strong>${props.lifecycle ?? 'N/A'}</strong></div>
+      polygon.bindPopup(`
+        <div style="font-family:system-ui,sans-serif;min-width:150px;">
+          <div style="font-weight:800;font-size:13px;margin-bottom:4px;color:${color};">${getSeverityLabel(props.severity)}</div>
+          <div style="font-size:12px;color:#94a3b8;">
+            <div>Wind: <strong style="color:#e2e8f0;">${props.windSpeed ?? 'N/A'} kn</strong></div>
+            <div>Swell: <strong style="color:#e2e8f0;">${props.waveHeight ?? 'N/A'} m</strong></div>
+            <div>Severity: <strong style="color:#e2e8f0;">${props.severity?.toFixed(1) ?? 'N/A'}</strong></div>
+            <div>Status: <strong style="color:#e2e8f0;">${props.lifecycle ?? 'N/A'}</strong></div>
           </div>
         </div>
       `, { closeButton: false });
 
-      circle.addTo(layer);
-      pulseRefs.current.set(props.id, circle);
+      polygon.addTo(layer);
 
-      if (props.severity >= 4) {
-        const el = circle.getElement();
-        if (el) {
-          animate(el, {
-            scale: [1, 1.08, 1],
-            duration: 3000,
-            easing: 'easeInOutSine',
-            loop: true,
-          });
+      const el = polygon.getElement();
+      if (el) {
+        animate(el, {
+          opacity: [0.4, 0.8, 0.4],
+          duration: 4000,
+          easing: 'easeInOutSine',
+          loop: true,
+        });
+
+        const innerCircle = L.circleMarker([centerLat, centerLng], {
+          radius: Math.max(15, radiusM / 6000),
+          color: color,
+          fillColor: color,
+          fillOpacity: 0.05,
+          weight: 1,
+          opacity: 0.3,
+        });
+        innerCircle.addTo(layer);
+
+        animate(innerCircle.getElement()!, {
+          scale: [0.95, 1.05, 0.95],
+          opacity: [0.15, 0.35, 0.15],
+          duration: 5000,
+          easing: 'easeInOutSine',
+          loop: true,
+        });
+
+        if (props.severity >= 3) {
+          for (let i = 0; i < 3; i++) {
+            const outerRing = L.circleMarker([centerLat, centerLng], {
+              radius: Math.max(20, radiusM / 5000) * (1 + i * 0.15),
+              color: color,
+              fill: false,
+              weight: 1,
+              opacity: 0.15,
+            });
+            outerRing.addTo(layer);
+
+            animate(outerRing.getElement()!, {
+              opacity: [0.15, 0.3, 0.15],
+              scale: [0.98 + i * 0.02, 1.02 + i * 0.02, 0.98 + i * 0.02],
+              duration: 3000 + i * 800,
+              easing: 'easeInOutSine',
+              loop: true,
+              delay: i * 400,
+            });
+          }
         }
       }
     });
 
     return () => {
       layer.clearLayers();
-      pulseRefs.current.clear();
     };
   }, [map, features, showWeather]);
 

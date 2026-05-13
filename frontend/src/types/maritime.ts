@@ -96,6 +96,32 @@ export interface WebSocketState {
   weather: GeoJSONFeatureCollection;
 }
 
+export interface ShipTrailPoint {
+  lat: number;
+  lng: number;
+  timestamp: number;
+}
+
+export interface ShipAnimationState {
+  currentLat: number;
+  currentLng: number;
+  targetLat: number;
+  targetLng: number;
+  currentHeading: number;
+  targetHeading: number;
+  speed: number;
+  trail: ShipTrailPoint[];
+  lastUpdate: number;
+}
+
+export interface Notification {
+  id: string;
+  type: 'storm_warning' | 'route_optimized' | 'ship_danger' | 'reconnect' | 'fuel_alert' | 'congestion';
+  title: string;
+  message: string;
+  timestamp: number;
+}
+
 export const MODE_PROFILES: Record<OptimizationMode, { label: string; description: string; fuel: number; time: number; safety: number }> = {
   eco: { label: 'Eco', description: 'Minimum fuel consumption', fuel: 80, time: 15, safety: 5 },
   fast: { label: 'Fast', description: 'Shortest transit time', fuel: 10, time: 80, safety: 10 },
@@ -104,8 +130,8 @@ export const MODE_PROFILES: Record<OptimizationMode, { label: string; descriptio
 };
 
 export const ROUTE_COLORS: Record<OptimizationMode, { color: string; dash: string }> = {
-  eco: { color: '#22c55e', dash: '10, 8' },
+  eco: { color: '#22c55e', dash: '8, 6' },
   fast: { color: '#3b82f6', dash: '1, 0' },
   safe: { color: '#f97316', dash: '2, 6' },
-  custom: { color: '#8b5cf6', dash: '8, 4' },
+  custom: { color: '#8b5cf6', dash: '6, 4' },
 };

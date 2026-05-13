@@ -15,37 +15,37 @@ export function Slider({ label, value, onChange, min = 0, max = 100, step = 1, u
     onChange(Number(e.target.value));
   };
 
+  const percent = ((value - min) / (max - min)) * 100;
+
   return (
     <div>
       <div className="flex justify-between items-center mb-1">
-        <label className="text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
+        <label className="text-[10px] font-bold text-gray-500 dark:text-blue-300/70 uppercase tracking-wider">
           {label}
         </label>
-        <span className="text-xs font-bold text-gray-900 dark:text-gray-200">
+        <span className="text-xs font-bold text-gray-700 dark:text-blue-300">
           {value}{unit}
         </span>
       </div>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={handleChange}
-        className="
-          w-full h-2 bg-gray-200 dark:bg-gray-600 rounded-full appearance-none cursor-pointer
-          accent-blue-600
-          [&::-webkit-slider-thumb]:appearance-none
-          [&::-webkit-slider-thumb]:w-5
-          [&::-webkit-slider-thumb]:h-5
-          [&::-webkit-slider-thumb]:bg-blue-600
-          [&::-webkit-slider-thumb]:border-2
-          [&::-webkit-slider-thumb]:border-black
-          [&::-webkit-slider-thumb]:rounded-full
-          [&::-webkit-slider-thumb]:cursor-pointer
-          min-h-[44px]
-        "
-      />
+      <div className="relative">
+        <div className="w-full h-1.5 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-gradient-to-r from-blue-500 to-blue-600 rounded-full transition-all duration-150"
+            style={{ width: `${percent}%` }}
+          />
+        </div>
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={handleChange}
+          className="
+            absolute inset-0 w-full h-full opacity-0 cursor-pointer
+          "
+        />
+      </div>
     </div>
   );
 }

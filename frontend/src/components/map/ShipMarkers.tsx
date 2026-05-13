@@ -1,23 +1,46 @@
-import { useMemo, useRef, useEffect, useCallback } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 import { useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { animate } from 'animejs';
 import { useStore } from '../../store/useStore';
-import type { ShipProperties } from '../../types/maritime';
+import type { ShipProperties, ShipTrailPoint } from '../../types/maritime';
+
+interface ShipAnimState {
+  marker: L.Marker;
+  trailLine: L.Polyline;
+  currentLat: number;
+  currentLng: number;
+  targetLat: number;
+  targetLng: number;
+  currentHeading: number;
+  targetHeading: number;
+  trail: ShipTrailPoint[];
+}
+
+const TRAIL_MAX_POINTS = 60;
+const INTERP_SPEED = 0.018;
 
 function createShipIcon(heading: number): L.DivIcon {
-  const size = 28;
+  const size = 30;
   return L.divIcon({
     className: 'ship-marker',
     html: `
-      <div class="ship-icon-container" style="
-        width: ${size}px; height: ${size}px;
-        transform: rotate(${heading}deg);
-        transition: transform 1.5s ease-in-out;
-      ">
-        <svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="#1e40af" stroke="#1e3a8a" stroke-width="0.5">
-          <path d="M12 2 L4 20 L12 16 L20 20 Z" />
-        </svg>
+      <div style="position:relative;width:${size}px;height:${size}px;">
+        <div class="ship-glow-ring" style="
+          position:absolute;inset:-6px;border-radius:50%;
+          background:radial-gradient(circle,rgba(59,130,246,0.35),transparent 70%);
+          opacity:0.4;pointer-events:none;
+        "></div>
+        <div class="ship-icon-container group cursor-pointer" style="
+          width:${size}px;height:${size}px;
+          transform:rotate(${heading}deg);
+          filter:drop-shadow(0 0 8px rgba(59,130,246,0.6));
+          transition:filter 0.3s ease,transform 0.3s ease;
+        ">
+          <svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="#3b82f6" stroke="#1e40af" stroke-width="0.5"
+            style="transition:fill 0.3s ease;">
+            <path d="M12 2 L4 20 L12 15 L20 20 Z" />
+          </svg>
+        </div>
       </div>
     `,
     iconSize: [size, size],
@@ -26,22 +49,33 @@ function createShipIcon(heading: number): L.DivIcon {
   });
 }
 
-function buildPopupContent(props: ShipProperties): string {
+function buildTooltipContent(props: ShipProperties): string {
   const name = props.name || 'Unknown';
-  const type = props.type || 'N/A';
   const speed = typeof props.speedKnots === 'number' ? props.speedKnots.toFixed(1) : 'N/A';
-  const heading = typeof props.heading === 'number' ? props.heading.toFixed(0) : 'N/A';
+  const destination = props.destination || 'N/A';
   const eta = typeof props.eta === 'number' ? props.eta.toFixed(1) : 'N/A';
+  const status = speed === 'N/A' || parseFloat(speed) < 0.5 ? 'Anchored' : parseFloat(speed) > 18 ? 'Transit' : 'Under Way';
+
+  const statusColors: Record<string, string> = {
+    'Anchored': '#ef4444',
+    'Under Way': '#eab308',
+    'Transit': '#22c55e',
+  };
 
   return `
-    <div class="ship-popup" style="font-family: system-ui, sans-serif; min-width: 160px;">
-      <div style="font-weight: 800; font-size: 14px; margin-bottom: 4px; color: #1e3a8a;">${name}</div>
-      <div style="font-size: 12px; color: #6b7280; margin-bottom: 8px;">${type}</div>
-      <table style="width: 100%; font-size: 12px; border-collapse: collapse;">
-        <tr><td style="color: #6b7280; padding: 1px 4px;">Speed</td><td style="font-weight: 600; text-align: right;">${speed} kn</td></tr>
-        <tr><td style="color: #6b7280; padding: 1px 4px;">Heading</td><td style="font-weight: 600; text-align: right;">${heading}°</td></tr>
-        <tr><td style="color: #6b7280; padding: 1px 4px;">ETA</td><td style="font-weight: 600; text-align: right;">${eta}h</td></tr>
-      </table>
+    <div style="font-family:system-ui,sans-serif;min-width:180px;">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:${statusColors[status] || '#94a3b8'};"></div>
+        <div style="font-weight:800;font-size:13px;color:#60a5fa;">${name}</div>
+      </div>
+      <div style="border-top:1px solid rgba(96,165,250,0.2);margin:4px 0;padding-top:4px;">
+        <table style="width:100%;font-size:11px;border-collapse:collapse;">
+          <tr><td style="color:#64748b;padding:1px 4px;">Speed</td><td style="font-weight:600;text-align:right;color:#e2e8f0;">${speed} kn</td></tr>
+          <tr><td style="color:#64748b;padding:1px 4px;">Destination</td><td style="font-weight:600;text-align:right;color:#e2e8f0;">${destination}</td></tr>
+          <tr><td style="color:#64748b;padding:1px 4px;">ETA</td><td style="font-weight:600;text-align:right;color:#e2e8f0;">${eta}h</td></tr>
+          <tr><td style="color:#64748b;padding:1px 4px;">Status</td><td style="font-weight:600;text-align:right;color:#e2e8f0;">${status}</td></tr>
+        </table>
+      </div>
     </div>
   `;
 }
@@ -49,56 +83,34 @@ function buildPopupContent(props: ShipProperties): string {
 export function ShipMarkers() {
   const map = useMap();
   const ships = useStore((s) => s.ships);
+  const followShip = useStore((s) => s.followShip);
   const layerRef = useRef<L.LayerGroup | null>(null);
-  const markersRef = useRef<Map<string, L.Marker>>(new Map());
-  const prevPositionsRef = useRef<Map<string, [number, number]>>(new Map());
+  const trailRef = useRef<L.LayerGroup | null>(null);
+  const animsRef = useRef<Map<string, ShipAnimState>>(new Map());
+  const rafRef = useRef<number>(0);
 
   const features = useMemo(() => {
     return ships?.features?.filter((f) => f.geometry.type === 'Point') ?? [];
   }, [ships]);
 
-  const animateMarker = useCallback((marker: L.Marker, lat: number, lng: number, heading: number) => {
-    const current = marker.getLatLng();
-    const proxy = { lat: current.lat, lng: current.lng, heading: 0 };
-
-    animate(proxy, {
-      lat: lat,
-      lng: lng,
-      duration: 4000,
-      easing: 'easeInOutQuad',
-      onUpdate: () => {
-        marker.setLatLng([proxy.lat, proxy.lng]);
-      },
-      onComplete: () => {
-        marker.setLatLng([lat, lng]);
-      },
-    });
-
-    const iconEl = marker.getElement()?.querySelector('.ship-icon-container') as HTMLElement | null;
-    if (iconEl) {
-      iconEl.style.transition = 'transform 1.5s ease-in-out';
-      iconEl.style.transform = `rotate(${heading}deg)`;
-    }
-  }, []);
-
   useEffect(() => {
     if (!map) return;
 
-    if (!layerRef.current) {
-      layerRef.current = L.layerGroup().addTo(map);
-    }
+    if (!layerRef.current) layerRef.current = L.layerGroup().addTo(map);
+    if (!trailRef.current) trailRef.current = L.layerGroup().addTo(map);
 
     const layer = layerRef.current;
-    const markers = markersRef.current;
-    const prevPositions = prevPositionsRef.current;
+    const trailLayer = trailRef.current;
+    const anims = animsRef.current;
+    const now = Date.now();
 
     const currentIds = new Set(features.map((f) => ((f.properties) as Record<string, unknown>)?.id as string));
 
-    markers.forEach((marker, id) => {
+    anims.forEach((state, id) => {
       if (!currentIds.has(id)) {
-        layer.removeLayer(marker);
-        markers.delete(id);
-        prevPositions.delete(id);
+        layer.removeLayer(state.marker);
+        trailLayer.removeLayer(state.trailLine);
+        anims.delete(id);
       }
     });
 
@@ -111,38 +123,118 @@ export function ShipMarkers() {
       const lat = coords[1];
       const heading = typeof props.heading === 'number' ? props.heading : 0;
 
-      let marker = markers.get(props.id);
+      let state = anims.get(props.id);
 
-      if (!marker) {
+      if (!state) {
         const icon = createShipIcon(heading);
-        marker = L.marker([lat, lng], { icon, zIndexOffset: 1000 }).addTo(layer);
-        marker.bindPopup(buildPopupContent(props), { closeButton: false, className: 'ship-popup-container' });
-        markers.set(props.id, marker);
-        prevPositions.set(props.id, [lat, lng]);
+        const marker = L.marker([lat, lng], { icon, zIndexOffset: followShip === props.id ? 2000 : 1000 });
+
+        marker.bindTooltip(buildTooltipContent(props), {
+          direction: 'top',
+          offset: L.point(0, -22),
+          className: 'bg-transparent border-none shadow-none',
+        });
+
+        marker.on('click', () => {
+          const current = useStore.getState().followShip;
+          useStore.getState().setFollowShip(current === props.id ? null : props.id);
+        });
+
+        marker.addTo(layer);
+
+        const trailLine = L.polyline([[lat, lng]], {
+          color: '#3b82f6',
+          weight: 1.5,
+          opacity: 0.5,
+          dashArray: '4, 6',
+        });
+        trailLine.addTo(trailLayer);
+
+        state = {
+          marker,
+          trailLine,
+          currentLat: lat,
+          currentLng: lng,
+          targetLat: lat,
+          targetLng: lng,
+          currentHeading: heading,
+          targetHeading: heading,
+          trail: [{ lat, lng, timestamp: now }],
+        };
+        anims.set(props.id, state);
       } else {
-        const prevPos = prevPositions.get(props.id);
-        const dist = prevPos ? Math.sqrt((lat - prevPos[0]) ** 2 + (lng - prevPos[1]) ** 2) : 0;
+        state.targetLat = lat;
+        state.targetLng = lng;
+        state.targetHeading = heading;
 
-        if (dist > 0.001) {
-          marker.setLatLng([lat, lng]);
-          const icon = createShipIcon(heading);
-          marker.setIcon(icon);
-          prevPositions.set(props.id, [lat, lng]);
-        } else if (dist > 0.0001) {
-          animateMarker(marker, lat, lng, heading);
-          prevPositions.set(props.id, [lat, lng]);
+        state.trail.push({ lat, lng, timestamp: now });
+        if (state.trail.length > TRAIL_MAX_POINTS) {
+          state.trail = state.trail.slice(-TRAIL_MAX_POINTS);
         }
+        state.trailLine.setLatLngs(state.trail.map((p) => [p.lat, p.lng] as [number, number]));
 
-        marker.setPopupContent(buildPopupContent(props));
+        state.marker.setTooltipContent(buildTooltipContent(props));
+        state.marker.setZIndexOffset(followShip === props.id ? 2000 : 1000);
+
+        const container = state.marker.getElement();
+        if (container) {
+          const glowEl = container.querySelector('.ship-glow-ring') as HTMLElement | null;
+          if (glowEl) {
+            glowEl.style.background = followShip === props.id
+              ? 'radial-gradient(circle,rgba(59,130,246,0.6),transparent 70%)'
+              : 'radial-gradient(circle,rgba(59,130,246,0.35),transparent 70%)';
+          }
+        }
       }
     });
 
     return () => {
-      layer.clearLayers();
-      markers.clear();
-      prevPositions.clear();
+      cancelAnimationFrame(rafRef.current);
     };
-  }, [map, features, animateMarker]);
+  }, [map, features, followShip]);
+
+  useEffect(() => {
+    let lastTime = performance.now();
+
+    function tick(time: number) {
+      const dt = Math.min((time - lastTime) / 16.67, 3);
+      lastTime = time;
+
+      animsRef.current.forEach((state) => {
+        const dLat = state.targetLat - state.currentLat;
+        const dLng = state.targetLng - state.currentLng;
+
+        state.currentLat += dLat * INTERP_SPEED * dt;
+        state.currentLng += dLng * INTERP_SPEED * dt;
+
+        let dHead = state.targetHeading - state.currentHeading;
+        if (dHead > 180) dHead -= 360;
+        if (dHead < -180) dHead += 360;
+        state.currentHeading += dHead * INTERP_SPEED * dt;
+        if (state.currentHeading < 0) state.currentHeading += 360;
+        if (state.currentHeading >= 360) state.currentHeading -= 360;
+
+        state.marker.setLatLng([state.currentLat, state.currentLng]);
+
+        const el = state.marker.getElement();
+        if (el) {
+          const iconContainer = el.querySelector('.ship-icon-container') as HTMLElement | null;
+          if (iconContainer) {
+            iconContainer.style.transform = `rotate(${state.currentHeading}deg) scale(1)`;
+          }
+          const glowEl = el.querySelector('.ship-glow-ring') as HTMLElement | null;
+          if (glowEl) {
+            glowEl.style.opacity = String(0.25 + Math.sin(time / 800) * 0.15);
+          }
+        }
+      });
+
+      rafRef.current = requestAnimationFrame(tick);
+    }
+
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, []);
 
   return null;
 }

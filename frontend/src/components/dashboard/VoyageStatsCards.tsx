@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { motion } from 'framer-motion';
 import { useStore } from '../../store/useStore';
 import { StatCard } from '../ui';
 
@@ -24,15 +25,23 @@ export function VoyageStatsCards() {
 
   if (!selectedRoute) {
     return (
-      <div className="flex items-center justify-center h-16 text-sm text-gray-400 dark:text-gray-500 font-bold">
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="flex items-center justify-center h-14 text-xs text-gray-500 dark:text-blue-400/50 font-bold bg-gray-800/30 backdrop-blur-sm rounded-xl border border-gray-700/20"
+      >
         No route selected — run an optimization
-      </div>
+      </motion.div>
     );
   }
 
   return (
-    <div className="flex gap-3 overflow-x-auto pb-1">
-      <div className="min-w-[140px] flex-1">
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex gap-2 overflow-x-auto pb-0.5"
+    >
+      <div className="min-w-[120px] flex-1">
         <StatCard
           label="Distance"
           value={selectedRoute.distanceNm}
@@ -40,44 +49,48 @@ export function VoyageStatsCards() {
           icon="📍"
           color="blue"
           decimals={0}
+          index={0}
         />
       </div>
-      <div className="min-w-[140px] flex-1">
+      <div className="min-w-[120px] flex-1">
         <StatCard
-          label="Estimated Arrival"
+          label="ETA"
           value={selectedRoute.etaHours}
           unit="hours"
           icon="⏱️"
           color="purple"
           decimals={1}
           trend={comparisons && comparisons.timeDiff > 0 ? 'up' : comparisons && comparisons.timeDiff < 0 ? 'down' : 'neutral'}
-          comparison={comparisons ? `${Math.abs(comparisons.timeDiff).toFixed(0)}% vs avg` : undefined}
+          comparison={comparisons ? `${Math.abs(comparisons.timeDiff).toFixed(0)}%` : undefined}
+          index={1}
         />
       </div>
-      <div className="min-w-[140px] flex-1">
+      <div className="min-w-[120px] flex-1">
         <StatCard
-          label="Fuel Estimate"
+          label="Fuel"
           value={selectedRoute.fuelEstimateTonnes}
           unit="tonnes"
           icon="⛽"
           color="green"
           decimals={0}
           trend={comparisons && comparisons.fuelSaved > 0 ? 'down' : comparisons && comparisons.fuelSaved < 0 ? 'up' : 'neutral'}
-          comparison={comparisons ? `${Math.abs(comparisons.fuelSaved).toFixed(0)}% vs avg` : undefined}
+          comparison={comparisons ? `${Math.abs(comparisons.fuelSaved).toFixed(0)}%` : undefined}
+          index={2}
         />
       </div>
-      <div className="min-w-[140px] flex-1">
+      <div className="min-w-[120px] flex-1">
         <StatCard
-          label="Safety Score"
+          label="Safety"
           value={100 - selectedRoute.riskScore}
           unit="%"
           icon="🛡️"
           color="orange"
           decimals={0}
           trend={comparisons && comparisons.safetyImprovement > 0 ? 'up' : comparisons && comparisons.safetyImprovement < 0 ? 'down' : 'neutral'}
-          comparison={comparisons ? `${Math.abs(comparisons.safetyImprovement).toFixed(0)}% vs avg` : undefined}
+          comparison={comparisons ? `${Math.abs(comparisons.safetyImprovement).toFixed(0)}%` : undefined}
+          index={3}
         />
       </div>
-    </div>
+    </motion.div>
   );
 }

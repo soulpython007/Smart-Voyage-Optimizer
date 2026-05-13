@@ -89,6 +89,7 @@ interface ShipState {
 }
 
 let shipStates: ShipState[] = [];
+let weatherTick = 0;
 
 export function initMockShips(): ShipState[] {
   shipStates = SHIP_DATA.map((s) => {
@@ -187,15 +188,17 @@ export function mockShipsFC(ships?: ShipState[]): GeoJSONFeatureCollection {
 }
 
 export function mockWeatherFC(): GeoJSONFeatureCollection {
+  weatherTick++;
+  const drift = weatherTick * 0.005;
   const storms = [
-    { lat: 0, lon: 82, radius: 200, severity: 1.2 },
-    { lat: 8, lon: 62, radius: 180, severity: 3.5 },
-    { lat: -4, lon: 92, radius: 150, severity: 5.2 },
-    { lat: 14, lon: 68, radius: 160, severity: 2.8 },
-    { lat: -2, lon: 50, radius: 220, severity: 5.8 },
-    { lat: 5, lon: 104, radius: 140, severity: 1.8 },
-    { lat: 22, lon: 58, radius: 120, severity: 4.2 },
-    { lat: -7, lon: 70, radius: 170, severity: 0.8 },
+    { lat: 0 + drift, lon: 82 + drift * 0.5, radius: 200, severity: 1.2 + Math.sin(weatherTick * 0.1) * 0.3 },
+    { lat: 8 - drift, lon: 62 + drift, radius: 180, severity: 3.5 + Math.sin(weatherTick * 0.08) * 0.4 },
+    { lat: -4 + drift * 0.7, lon: 92 - drift * 0.3, radius: 150, severity: 5.2 + Math.sin(weatherTick * 0.12) * 0.3 },
+    { lat: 14 + drift * 0.3, lon: 68 - drift * 0.5, radius: 160, severity: 2.8 + Math.sin(weatherTick * 0.09) * 0.5 },
+    { lat: -2 - drift * 0.4, lon: 50 + drift * 0.8, radius: 220, severity: 5.8 + Math.sin(weatherTick * 0.11) * 0.4 },
+    { lat: 5 + drift * 0.6, lon: 104 - drift * 0.2, radius: 140, severity: 1.8 + Math.sin(weatherTick * 0.07) * 0.3 },
+    { lat: 22 - drift * 0.2, lon: 58 + drift * 0.6, radius: 120, severity: 4.2 + Math.sin(weatherTick * 0.13) * 0.5 },
+    { lat: -7 + drift * 0.5, lon: 70 + drift * 0.4, radius: 170, severity: 0.8 + Math.sin(weatherTick * 0.06) * 0.4 },
   ];
 
   return {
@@ -214,9 +217,9 @@ export function mockWeatherFC(): GeoJSONFeatureCollection {
         geometry: { type: 'Polygon', coordinates: [pts] },
         properties: {
           id: `storm-${i}`,
-          severity: s.severity,
-          windSpeed: 10 + s.severity * 12 + rand(-3, 3),
-          waveHeight: 1 + s.severity * 1.8 + rand(-0.5, 0.5),
+          severity: Math.round(s.severity * 10) / 10,
+          windSpeed: Math.round((10 + s.severity * 12 + rand(-3, 3)) * 10) / 10,
+          waveHeight: Math.round((1 + s.severity * 1.8 + rand(-0.5, 0.5)) * 10) / 10,
           lifecycle: s.severity > 4 ? 'growing' : s.severity > 2 ? 'stable' : 'dying',
         },
       };
@@ -224,20 +227,30 @@ export function mockWeatherFC(): GeoJSONFeatureCollection {
   };
 }
 
+let currentTick = 0;
+
 export function mockCurrentsFC(): GeoJSONFeatureCollection {
+  currentTick++;
   const features: GeoJSONFeatureCollection['features'] = [];
   const GRID = 8;
+  const tide = Math.sin(currentTick * 0.05) * 0.3;
   for (let r = 0; r < GRID; r++) {
     for (let c = 0; c < GRID; c++) {
       const lat = -8 + (r / (GRID - 1)) * 38;
       const lon = 32 + (c / (GRID - 1)) * 76;
-      const dir = (90 + Math.sin((lat + 8) / 38 * Math.PI * 2) * 40 + Math.sin(lon / 76 * Math.PI * 2) * 30 + 360) % 360;
+      const timeOffset = currentTick * 0.02;
+      const dir = (90
+        + Math.sin((lat + 8) / 38 * Math.PI * 2 + timeOffset) * 40
+        + Math.sin(lon / 76 * Math.PI * 2 + timeOffset * 0.7) * 30
+        + tide * 10
+        + 360) % 360;
+      const speed = Math.max(0.2, 0.5 + Math.sin((lat + 8) / 38 * Math.PI * 2 + timeOffset * 1.3) * 1 + Math.random() * 1.5 + tide);
       features.push({
         type: 'Feature' as const,
         geometry: { type: 'Point' as const, coordinates: [lon, lat] },
         properties: {
           direction: Math.round(dir * 10) / 10,
-          speedKnots: Math.round((0.5 + Math.random() * 3) * 100) / 100,
+          speedKnots: Math.round(speed * 100) / 100,
         },
       });
     }

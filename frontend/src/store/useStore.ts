@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { GeoJSONFeatureCollection, RouteInfo, OptimizationMode } from '../types/maritime';
+import type { GeoJSONFeatureCollection, RouteInfo, OptimizationMode, Notification } from '../types/maritime';
 import { api } from '../services/api';
 import { demoApi } from '../services/demoApi';
 import { initMockShips } from '../services/mockData';
@@ -31,6 +31,9 @@ interface AppState {
 
   settings: OptimizationSettings;
 
+  followShip: string | null;
+  notifications: Notification[];
+
   setShips: (ships: GeoJSONFeatureCollection) => void;
   setWeatherZones: (zones: GeoJSONFeatureCollection) => void;
   setCurrents: (currents: GeoJSONFeatureCollection) => void;
@@ -44,6 +47,10 @@ interface AppState {
 
   updateSettings: (partial: Partial<OptimizationSettings>) => void;
   updateWeights: (weights: { fuel?: number; time?: number; safety?: number }) => void;
+
+  setFollowShip: (shipId: string | null) => void;
+  addNotification: (notification: Notification) => void;
+  dismissNotification: (id: string) => void;
 
   optimize: () => Promise<void>;
   fetchInitialData: () => Promise<void>;
@@ -59,6 +66,8 @@ async function tryWithFallback<T>(
     return fallback();
   }
 }
+
+let notifCounter = 0;
 
 export const useStore = create<AppState>((set, get) => ({
   ships: { type: 'FeatureCollection', features: [] },
@@ -82,6 +91,9 @@ export const useStore = create<AppState>((set, get) => ({
     mode: 'eco',
     weights: { fuel: 33, time: 33, safety: 34 },
   },
+
+  followShip: null,
+  notifications: [],
 
   setShips: (ships) => set({ ships }),
   setWeatherZones: (weatherZones) => set({ weatherZones }),
@@ -107,6 +119,18 @@ export const useStore = create<AppState>((set, get) => ({
       },
     })),
 
+  setFollowShip: (followShip) => set({ followShip }),
+
+  addNotification: (notification) =>
+    set((state) => ({
+      notifications: [notification, ...state.notifications].slice(0, 20),
+    })),
+
+  dismissNotification: (id) =>
+    set((state) => ({
+      notifications: state.notifications.filter((n) => n.id !== id),
+    })),
+
   optimize: async () => {
     const { settings } = get();
     if (!settings.departure || !settings.destination) {
@@ -125,6 +149,14 @@ export const useStore = create<AppState>((set, get) => ({
         weights: settings.weights,
       });
       set({ routes: result.routes, selectedRouteIndex: 0, isOptimizing: false });
+      const routeNames = result.routes.map((r) => r.mode.toUpperCase()).join(', ');
+      get().addNotification({
+        id: `route-${++notifCounter}`,
+        type: 'route_optimized',
+        title: 'Route Optimized',
+        message: `Found ${result.routes.length} route options: ${routeNames}`,
+        timestamp: Date.now(),
+      });
     } catch (err) {
       set({ error: err instanceof Error ? err.message : 'Optimization failed', isOptimizing: false });
     }

@@ -20,7 +20,7 @@ export function Dropdown({ label, value, options, onChange, placeholder }: Dropd
 
   return (
     <div>
-      <label className="block text-xs font-bold text-gray-600 dark:text-gray-400 mb-1 uppercase tracking-wider">
+      <label className="block text-[10px] font-bold text-gray-500 dark:text-blue-300/70 mb-1 uppercase tracking-wider">
         {label}
       </label>
       <select
@@ -28,15 +28,16 @@ export function Dropdown({ label, value, options, onChange, placeholder }: Dropd
         onChange={handleChange}
         className="
           w-full px-3 py-2.5
-          bg-white dark:bg-gray-700
-          border-2 border-black dark:border-gray-600
+          bg-white dark:bg-gray-800/60
+          border-2 border-black/10 dark:border-blue-900/40
           rounded-xl
           font-medium text-sm text-gray-900 dark:text-gray-100
-          shadow-neobrutalist-sm
-          focus:outline-none focus:ring-2 focus:ring-blue-500
+          shadow-neobrutalist-sm dark:shadow-[0_2px_0_0_rgba(30,58,95,0.5)]
+          focus:outline-none focus:ring-2 focus:ring-blue-500/50
           min-h-[44px]
           appearance-none
           cursor-pointer
+          backdrop-blur-sm
         "
       >
         {placeholder && <option value="">{placeholder}</option>}
