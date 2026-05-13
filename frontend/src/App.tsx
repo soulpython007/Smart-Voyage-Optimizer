@@ -5,6 +5,7 @@ import { ProtectedRoute } from './auth/ProtectedRoute';
 import { QueryProvider } from './providers/QueryProvider';
 import { ThemeProvider } from './providers/ThemeProvider';
 import { SignUpPage } from './auth/SignUpPage';
+import { AuthCallback } from './pages/AuthCallback';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -55,6 +56,10 @@ function AppContent() {
 
   if (path === '/signup') {
     return <SignUpPage />;
+  }
+
+  if (path === '/auth/callback') {
+    return <AuthCallback />;
   }
 
   return (

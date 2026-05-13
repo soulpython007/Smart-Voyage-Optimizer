@@ -4,7 +4,7 @@ import { supabase } from './supabaseClient';
 import { AuthContext } from './useAuth';
 
 const REDIRECT_URL = typeof window !== 'undefined'
-  ? `${window.location.origin}/dashboard`
+  ? `${window.location.origin}/auth/callback`
   : '';
 
 interface AuthProviderProps {
