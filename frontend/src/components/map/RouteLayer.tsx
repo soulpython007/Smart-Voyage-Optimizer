@@ -5,179 +5,193 @@ import { animate } from 'animejs';
 import { useStore } from '../../store/useStore';
 import { ROUTE_COLORS, type OptimizationMode } from '../../types/maritime';
 
+function validateCoords(wp: { latitude: number; longitude: number }): boolean {
+  return (
+    typeof wp.latitude === 'number' && isFinite(wp.latitude) &&
+    typeof wp.longitude === 'number' && isFinite(wp.longitude) &&
+    wp.latitude >= -90 && wp.latitude <= 90 &&
+    wp.longitude >= -180 && wp.longitude <= 180
+  );
+}
+
 export function RouteLayer() {
   const map = useMap();
   const routes = useStore((s) => s.routes);
   const selectedIndex = useStore((s) => s.selectedRouteIndex);
   const layerRef = useRef<L.LayerGroup | null>(null);
-  const waypointRef = useRef<L.LayerGroup | null>(null);
+  const markersRef = useRef<L.LayerGroup | null>(null);
   const polylinesRef = useRef<Map<OptimizationMode, L.Polyline>>(new Map());
+  const prevRoutesLenRef = useRef(0);
 
   const routeEntries = useMemo(() => {
     return routes.map((r, i) => ({ route: r, index: i, isSelected: i === selectedIndex }));
   }, [routes, selectedIndex]);
 
+  const routesChanged = routes.length !== prevRoutesLenRef.current;
+
   useEffect(() => {
     if (!map) return;
 
     if (!layerRef.current) layerRef.current = L.layerGroup().addTo(map);
-    if (!waypointRef.current) waypointRef.current = L.layerGroup().addTo(map);
+    if (!markersRef.current) markersRef.current = L.layerGroup().addTo(map);
 
     const layer = layerRef.current;
-    const waypointLayer = waypointRef.current;
+    const markerLayer = markersRef.current;
     const polylines = polylinesRef.current;
 
-    polylines.forEach((_, mode) => {
-      if (!routes.find((r) => r.mode === mode)) {
-        const pl = polylines.get(mode);
-        if (pl) {
-          layer.removeLayer(pl);
-          polylines.delete(mode);
-        }
-      }
-    });
+    layer.clearLayers();
+    markerLayer.clearLayers();
+    polylines.clear();
 
-    const allVisibleCoords: [number, number][] = [];
+    const allCoords: [number, number][] = [];
 
     routeEntries.forEach(({ route, index, isSelected }) => {
       const style = ROUTE_COLORS[route.mode];
-      const coords = route.waypoints.map((wp) => [wp.latitude, wp.longitude] as [number, number]);
-      if (coords.length < 2) return;
+      const validWaypoints = route.waypoints.filter(validateCoords);
 
-      allVisibleCoords.push(...coords);
+      if (validWaypoints.length < 2) return;
 
-      let polyline = polylines.get(route.mode);
+      const coords = validWaypoints.map((wp) => [wp.latitude, wp.longitude] as [number, number]);
+      allCoords.push(...coords);
 
-      if (!polyline) {
-        const dashArray = style.dash === '1, 0' ? undefined : style.dash;
+      const dashArray = style.dash === '1, 0' ? undefined : style.dash;
 
-        polyline = L.polyline(coords, {
-          color: style.color,
-          weight: isSelected ? 5 : 3,
-          opacity: isSelected ? 0.9 : 0.4,
-          dashArray,
-          lineCap: 'round',
-          lineJoin: 'round',
-        });
+      const polyline = L.polyline(coords, {
+        color: style.color,
+        weight: isSelected ? 5 : 3,
+        opacity: isSelected ? 0.9 : 0.4,
+        dashArray,
+        lineCap: 'round',
+        lineJoin: 'round',
+      });
 
-        polyline.addTo(layer);
+      polyline.addTo(layer);
 
-        polyline.bindPopup(`
-          <div style="font-family:system-ui,sans-serif;min-width:150px;">
-            <div style="font-weight:800;font-size:13px;margin-bottom:6px;color:${style.color};text-transform:uppercase;letter-spacing:0.5px;">
-              ${route.mode.toUpperCase()} Route
-            </div>
-            <div style="font-size:12px;color:#94a3b8;">
-              <div>Distance: <strong style="color:#e2e8f0;">${route.distanceNm.toFixed(0)} nm</strong></div>
-              <div>ETA: <strong style="color:#e2e8f0;">${route.etaHours.toFixed(1)} h</strong></div>
-              <div>Fuel: <strong style="color:#e2e8f0;">${route.fuelEstimateTonnes.toFixed(0)} t</strong></div>
-              <div>Risk: <strong style="color:#e2e8f0;">${route.riskScore.toFixed(0)}%</strong></div>
-            </div>
+      polyline.bindPopup(`
+        <div style="font-family:system-ui,sans-serif;min-width:150px;">
+          <div style="font-weight:800;font-size:13px;margin-bottom:6px;color:${style.color};text-transform:uppercase;letter-spacing:0.5px;">
+            ${route.mode.toUpperCase()} Route
           </div>
-        `, { closeButton: false });
+          <div style="font-size:12px;color:#94a3b8;">
+            <div>Distance: <strong style="color:#e2e8f0;">${route.distanceNm.toFixed(0)} nm</strong></div>
+            <div>ETA: <strong style="color:#e2e8f0;">${route.etaHours.toFixed(1)} h</strong></div>
+            <div>Fuel: <strong style="color:#e2e8f0;">${route.fuelEstimateTonnes.toFixed(0)} t</strong></div>
+            <div>Risk: <strong style="color:#e2e8f0;">${route.riskScore.toFixed(0)}%</strong></div>
+          </div>
+        </div>
+      `, { closeButton: false });
 
-        polyline.on('click', () => {
-          useStore.getState().selectRoute(index);
+      polyline.on('click', () => {
+        useStore.getState().selectRoute(index);
+      });
+
+      polylines.set(route.mode, polyline);
+
+      const pathEl = polyline.getElement()?.querySelector('path');
+      if (pathEl) {
+        const length = pathEl.getTotalLength();
+        pathEl.style.strokeDasharray = String(length);
+        pathEl.style.strokeDashoffset = String(length);
+
+        animate(pathEl, {
+          strokeDashoffset: [length, 0],
+          duration: 2000,
+          easing: 'easeInOutCubic',
         });
+      }
 
-        polylines.set(route.mode, polyline);
-
-        const pathEl = polyline.getElement()?.querySelector('path');
-        if (pathEl) {
-          const length = pathEl.getTotalLength();
-          pathEl.style.strokeDasharray = String(length);
-          pathEl.style.strokeDashoffset = String(length);
-
-          animate(pathEl, {
-            strokeDashoffset: [length, 0],
+      if (isSelected) {
+        const el = polyline.getElement();
+        if (el) {
+          animate(el, {
+            boxShadow: [
+              `0 0 0px ${style.color}00`,
+              `0 0 14px ${style.color}88`,
+              `0 0 0px ${style.color}00`,
+            ],
             duration: 2000,
-            easing: 'easeInOutCubic',
+            easing: 'easeInOutSine',
+            loop: true,
           });
         }
+      }
 
-        if (isSelected) {
-          const el = polyline.getElement();
-          if (el) {
-            animate(el, {
-              boxShadow: [
-                `0 0 0px ${style.color}00`,
-                `0 0 14px ${style.color}88`,
-                `0 0 0px ${style.color}00`,
-              ],
-              duration: 2000,
-              easing: 'easeInOutSine',
-              loop: true,
-            });
-          }
-        }
+      if (isSelected && validWaypoints.length >= 2) {
+        const first = validWaypoints[0];
+        const last = validWaypoints[validWaypoints.length - 1];
 
-        route.waypoints.forEach((wp, i) => {
-          const isStart = i === 0;
-          const isEnd = i === route.waypoints.length - 1;
+        const depMarker = L.circleMarker([first.latitude, first.longitude], {
+          radius: 7,
+          color: '#22c55e',
+          fillColor: '#22c55e',
+          fillOpacity: 0.9,
+          weight: 2,
+          opacity: 1,
+        });
+        depMarker.bindTooltip(`Departure`, { direction: 'bottom', className: 'bg-transparent border-none' });
+        depMarker.addTo(markerLayer);
 
+        animate(depMarker.getElement()!, {
+          scale: [1, 1.3, 1],
+          opacity: [0.9, 1, 0.9],
+          duration: 2000,
+          easing: 'easeInOutSine',
+          loop: true,
+        });
+
+        const destMarker = L.circleMarker([last.latitude, last.longitude], {
+          radius: 7,
+          color: '#ef4444',
+          fillColor: '#ef4444',
+          fillOpacity: 0.9,
+          weight: 2,
+          opacity: 1,
+        });
+        destMarker.bindTooltip(`Destination`, { direction: 'top', className: 'bg-transparent border-none' });
+        destMarker.addTo(markerLayer);
+
+        animate(destMarker.getElement()!, {
+          scale: [1, 1.3, 1],
+          opacity: [0.9, 1, 0.9],
+          duration: 2000,
+          easing: 'easeInOutSine',
+          loop: true,
+        });
+
+        validWaypoints.forEach((wp, i) => {
+          if (i === 0 || i === validWaypoints.length - 1) return;
           const dot = L.circleMarker([wp.latitude, wp.longitude], {
-            radius: isStart || isEnd ? 5 : 3,
+            radius: 2.5,
             color: style.color,
             fillColor: style.color,
-            fillOpacity: isSelected ? 0.8 : 0.4,
-            weight: isStart || isEnd ? 2 : 1,
-            opacity: isSelected ? 0.9 : 0.5,
+            fillOpacity: 0.5,
+            weight: 1,
+            opacity: 0.6,
           });
-
-          if (isStart) {
-            dot.bindTooltip(`Departure: ${route.waypoints[0].latitude.toFixed(2)}°, ${route.waypoints[0].longitude.toFixed(2)}°`, {
-              direction: 'bottom',
-              className: 'bg-transparent border-none',
-            });
-          }
-          if (isEnd) {
-            dot.bindTooltip(`Destination: ${route.waypoints[route.waypoints.length - 1].latitude.toFixed(2)}°, ${route.waypoints[route.waypoints.length - 1].longitude.toFixed(2)}°`, {
-              direction: 'top',
-              className: 'bg-transparent border-none',
-            });
-          }
-
-          dot.addTo(waypointLayer);
+          dot.addTo(markerLayer);
         });
-      } else {
-        polyline.setLatLngs(coords);
-        polyline.setStyle({
-          weight: isSelected ? 5 : 3,
-          opacity: isSelected ? 0.9 : 0.4,
-        });
-
-        if (isSelected) {
-          const el = polyline.getElement();
-          if (el) {
-            animate(el, {
-              boxShadow: [
-                `0 0 0px ${style.color}00`,
-                `0 0 14px ${style.color}88`,
-                `0 0 0px ${style.color}00`,
-              ],
-              duration: 2000,
-              easing: 'easeInOutSine',
-              loop: true,
-            });
-          }
-        }
       }
     });
 
-    if (allVisibleCoords.length > 0 && routes.length > 0 && selectedIndex !== null) {
-      const bounds = L.latLngBounds(allVisibleCoords);
-      map.fitBounds(bounds, { padding: [60, 60], maxZoom: 6, animate: true, duration: 1 });
+    prevRoutesLenRef.current = routes.length;
+
+    if (allCoords.length >= 2) {
+      try {
+        const bounds = L.latLngBounds(allCoords);
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [80, 80], maxZoom: 6, animate: true, duration: 1.2 });
+        }
+      } catch {
+      }
     }
 
-    return () => {
-      waypointLayer.clearLayers();
-    };
-  }, [map, routeEntries, routes, selectedIndex]);
+    return () => {};
+  }, [map, routeEntries]);
 
   useEffect(() => {
     return () => {
       layerRef.current?.clearLayers();
-      waypointRef.current?.clearLayers();
+      markersRef.current?.clearLayers();
       polylinesRef.current.clear();
     };
   }, []);

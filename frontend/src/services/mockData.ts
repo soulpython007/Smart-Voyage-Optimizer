@@ -21,13 +21,24 @@ function gcInterp(lat1: number, lon1: number, lat2: number, lon2: number, f: num
   const dLon = ((lon2 - lon1) * Math.PI) / 180;
   const rLat1 = (lat1 * Math.PI) / 180;
   const rLat2 = (lat2 * Math.PI) / 180;
-  const a = Math.sin((1 - f) * dLon) / Math.sin(dLon);
-  const b = Math.sin(f * dLon) / Math.sin(dLon);
+
+  if (Math.abs(dLon) < 0.0001) {
+    const lat = lat1 + (lat2 - lat1) * f;
+    return { latitude: lat, longitude: lon1 + (lon2 - lon1) * f };
+  }
+
+  const sinDLon = Math.sin(dLon);
+  const a = Math.sin((1 - f) * dLon) / sinDLon;
+  const b = Math.sin(f * dLon) / sinDLon;
   const x = a * Math.cos(rLat1) + b * Math.cos(rLat2);
   const y = a * Math.sin(rLat1) + b * Math.sin(rLat2);
+
+  let rawLon = lon1 + f * ((lon2 - lon1 + 540) % 360 - 180);
+  rawLon = ((rawLon % 360) + 540) % 360 - 180;
+
   return {
     latitude: (Math.atan2(y, x) * 180) / Math.PI,
-    longitude: ((lon1 + f * ((lon2 - lon1 + 540) % 360 - 180)) + 360) % 360 - 180,
+    longitude: rawLon,
   };
 }
 
@@ -265,11 +276,16 @@ export function mockRoutesFC(fromId: string, toId: string, mode: string): Optimi
   const baseRoute = buildGreatCircleRoute(from.lat, from.lon, to.lat, to.lon);
   const totalNm = haversine(from.lat, from.lon, to.lat, to.lon);
 
-  function offsetRoute(route: { latitude: number; longitude: number }[], latOff: number, lonOff: number) {
-    return route.map((p) => ({
-      latitude: p.latitude + latOff,
-      longitude: p.longitude + lonOff,
-    }));
+  function offsetRoute(route: { latitude: number; longitude: number }[], latOff: number, lonOff: number): { latitude: number; longitude: number }[] {
+    const result = route.map((p, i) => {
+      if (i === 0) return { latitude: from.lat, longitude: from.lon };
+      if (i === route.length - 1) return { latitude: to.lat, longitude: to.lon };
+      return {
+        latitude: p.latitude + latOff,
+        longitude: p.longitude + lonOff,
+      };
+    });
+    return result;
   }
 
   function toGeoJSON(waypoints: { latitude: number; longitude: number }[]): GeoJSONFeatureCollection['features'][0] {
